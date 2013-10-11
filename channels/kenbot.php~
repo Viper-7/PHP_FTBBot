@@ -1,6 +1,6 @@
 <?php
 class kenbot extends IRCServerChannel {
-	protected $dbFile = '/home/niel/ftb_triggers.sqlite';
+	protected $dbFile = '/var/ftb_triggers.sqlite';
 	protected $db;
 	
 	protected $authList = array(
