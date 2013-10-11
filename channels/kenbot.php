@@ -1,6 +1,6 @@
 <?php
 class kenbot extends IRCServerChannel {
-	protected $dbFile = '/home/niel/ftb_triggers.sqlite';
+	public static $db_file = '/var/ftb_triggers.sqlite';
 	protected $db;
 	
 	protected $authList = array(
@@ -12,6 +12,12 @@ class kenbot extends IRCServerChannel {
 		if($this->isAuthed($who)) {
 			if($message == '!bounce')
 				die();
+				
+			if($message == '!reload') {
+				chdir(dirname(__FILE__) . '/..');
+				shell_exec('git pull');
+				die();
+			}
 		}
 		
 		if(preg_match('/^(?:([^,]+)[,:]\s*)?\!\+(\w+)(.*?)$/', $message, $matches)) {
@@ -78,7 +84,7 @@ class kenbot extends IRCServerChannel {
 	}
 	
 	public function event_joined() {
-		$this->db = new PDO("sqlite://{$this->dbFile}");
+		$this->db = new PDO('sqlite://' . self::$db_file);
 		$this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 		
 		$this->db->query('
