@@ -4,7 +4,7 @@ class kenbot extends IRCServerChannel {
 	protected $db;
 	
 	protected $authList = array(
-		'Viper-7' => 'viper7@*',
+		'Viper-7' => '~viper7@*',
 		'niel' => 'niel@*',
 	);
 	
@@ -19,9 +19,12 @@ class kenbot extends IRCServerChannel {
 			
 			if($trigger == 'add' && $this->isAuthed($who)) {
 				$params = array_map('trim', explode('=', $rest, 2));
-				$this->query('INSERT INTO Commands SET Trigger=?, Response=?', $params);
+				$res = $this->query('INSERT INTO Commands (Trigger, Response) VALUES (?,?)', $params);
+				if($res) {
+					$this->send_msg("Added trigger {$params[0]}.");
+				}
 			} else {
-				$commands = $this->query('SELECT ID, Response FROM Commands WHERE Trigger=?', $trigger);
+				$commands = $this->query('SELECT Response FROM Commands WHERE Trigger=?', $trigger);
 				
 				if($commands) {
 					$response = $commands[0][0];
@@ -56,12 +59,12 @@ class kenbot extends IRCServerChannel {
 	
 	protected function isAuthed($who) {
 		foreach($this->authList as $nick => $auth) {
-			list($nick, $mode, $ident, $host) = IRCServerUser::decodeHostmask("{$nick}!{$auth}");
+			$user = IRCServerUser::decodeHostmask("{$nick}!{$auth}");
 			
 			if(
-				   $nick == $who->nick
-				&& ($ident == '*' || $ident == $who->ident)
-				&& ($host == '*' || $host == $who->host)
+				   $user['nick'] == $who->nick
+				&& ($user['ident'] == '*' || $user['ident'] == $who->ident)
+				&& ($user['host'] == '*' || $user['host'] == $who->host)
 			) {
 				return true;
 			}
