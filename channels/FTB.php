@@ -3,7 +3,17 @@ class FTB extends IRCServerChannel {
 	protected $dbFile = '/var/ftb_triggers.sqlite';
 	protected $db;
 	
+	protected $authList = array(
+		'Viper-7' => 'viper7@*',
+		'niel' => 'niel@*',
+	);
+	
 	protected function handleTriggerResponse($message, $who) {
+		if($this->isAuthed($who)) {
+			if($message == '!bounce')
+				die();
+		}
+		
 		if(preg_match('/^(?:([^,]+)[,:]\s*)?\!\+(\w+)(.*?)$/', $message, $matches)) {
 			list($match, $target, $trigger, $rest) = $matches;
 			
@@ -25,13 +35,27 @@ class FTB extends IRCServerChannel {
 		}
 	}
 	
+	protected function isAuthed($who) {
+		foreach($this->authList as $nick => $auth) {
+			list($nick, $mode, $ident, $host) = IRCServerUser::decodeHostmask("{$nick}!{$auth}");
+			
+			if(
+				   $nick == $who->nick
+				&& ($ident == '*' || $ident == $who->ident)
+				&& ($host == '*' || $host == $who->host)
+			) {
+				return true;
+			}
+		}
+	}
+	
 	public function event_msg($who, $message) {
 		$this->handleTriggerResponse($message, $who);
 	}
 	
 	public function event_joined() {
 		$this->db = new PDO("sqlite://$dbFile");
-		$this->db->setAttribute(PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION);
+		$this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 	}
 	
 	protected function query($sql, $params) {
