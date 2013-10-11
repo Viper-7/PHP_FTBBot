@@ -236,18 +236,15 @@ class IRCServerConnection
 				$this->send_line('PONG ' . $parts[1]);
 		}
 		
-		switch($parts[1])
-		{
+		switch($parts[1]) {
 			case 'PRIVMSG':
 				$content = trim(implode(' ', array_slice($parts, 3)), ": ");
-				if(substr($content,0,1) == "\001")
-				{
+				if(substr($content,0,1) == "\001") {
 					$ctcp = true;
 					$content = trim($content, "\001");
 				}
 				
-				if($content == 'VERSION' && $ctcp)
-				{
+				if($content == 'VERSION' && $ctcp) {
 					$this->sendCTCP(IRCServerUser::getByHostmask($parts[0])->nick, 'VERSION V7IRC');
 				} else {
 					if($parts[2] != $this->nick)

@@ -125,7 +125,6 @@ class IRCServerChannel
 		foreach(self::$channels as $channel) {
 			if(in_array($user, $channel->users))
 				$out[] = $channel;
-			}
 		}
 		
 		return $out;
