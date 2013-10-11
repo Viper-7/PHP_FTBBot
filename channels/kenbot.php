@@ -19,6 +19,7 @@ class kenbot extends IRCServerChannel {
 			
 			if($trigger == 'add' && $this->isAuthed($who)) {
 				$params = array_map('trim', explode('=', $rest, 2));
+				$this->query('DELETE FROM Commands WHERE Trigger=?', $params[0]);
 				$res = $this->query('INSERT INTO Commands (Trigger, Response) VALUES (?,?)', $params);
 				if($res) {
 					$this->send_msg("Added trigger {$params[0]}.");

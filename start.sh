@@ -1,6 +1,6 @@
 #!/bin/bash
 
-
-pwd
+while [ 1 ]; do
+	git pull
 	php startBot.php
 done
