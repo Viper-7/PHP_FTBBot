@@ -259,6 +259,12 @@ class IRCServerConnection
 						$chan->event_msg($user, $content);
 					} else {
 						// Process private message
+						$user = IRCServerUser::getByHostmask($parts[0]);
+						$chans = IRCServerChannel::getChannelsByUser($user);
+						
+						foreach($chans as $chan) {
+							$chan->event_privmsg($user, $content);
+						}
 					}
 				}
 				break;

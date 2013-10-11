@@ -113,6 +113,25 @@ class IRCServerChannel
 	}
 	
 	/**
+	* Gets all IRCServerChannel objects of channels which the supplied user is joined to
+	*
+	* @param string Channel name (Including the #)
+	* @return IRCServerChannel
+	*/
+	public static function getChannelsByUser(IRCServerUser $user)
+	{
+		$out = array();
+		
+		foreach(self::$channels as $channel) {
+			if(in_array($user, $channel->users))
+				$out[] = $channel;
+			}
+		}
+		
+		return $out;
+	}
+	
+	/**
 	* Send a message in the channel
 	*
 	* @param String Message to send
@@ -196,6 +215,17 @@ class IRCServerChannel
 	* @param String What they said
 	*/
 	public function event_msg($who, $message)
+	{
+	
+	}
+	
+	/**
+	* Event raised when someone in the channel sends the bot a private message
+	*
+	* @param IRCServerUser Person who spoke
+	* @param String What they said
+	*/
+	public function event_privmsg($who, $message)
 	{
 	
 	}

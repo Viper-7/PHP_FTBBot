@@ -1,34 +1,26 @@
 <?php
+/**
+* Authentication Levels
+*
+* 80 = reload the service from git
+* 70 = restart the service
+* 40 = add a trigger
+**/
 class kenbot extends IRCServerChannel {
 	public static $db_file = '/var/ftb_triggers.sqlite';
 	protected $db;
 	
-	protected $authList = array(
-		'Viper-7' => '~viper7@*',
-		'niel' => 'niel@*',
-	);
-	
 	protected function handleTriggerResponse($message, $who) {
-		if($this->isAuthed($who)) {
-			if($message == '!bounce')
-				die();
-				
-			if($message == '!reload') {
-				chdir(dirname(__FILE__) . '/..');
-				shell_exec('git pull');
-				die();
-			}
-		}
-		
 		if(preg_match('/^(?:([^,]+)[,:]\s*)?\!\+(\w+)(.*?)$/', $message, $matches)) {
 			list($match, $target, $trigger, $rest) = $matches;
 			
-			if($trigger == 'add' && $this->isAuthed($who)) {
+			if($trigger == 'add' && $this->isAuthed($who, 40)) {
 				$params = array_map('trim', explode('=', $rest, 2));
 				$this->query('DELETE FROM Commands WHERE Trigger=?', $params[0]);
 				$res = $this->query('INSERT INTO Commands (Trigger, Response) VALUES (?,?)', $params);
 				if($res) {
 					$this->send_msg("Added trigger {$params[0]}.");
+					return true;
 				}
 			} else {
 				$commands = $this->query('SELECT Response FROM Commands WHERE Trigger=?', $trigger);
@@ -40,6 +32,8 @@ class kenbot extends IRCServerChannel {
 						$this->send_msg("{$target}, {$response}");
 					else
 						$this->send_msg($response);
+					
+					return true;
 				}
 			}
 		}
@@ -60,21 +54,18 @@ class kenbot extends IRCServerChannel {
 				else
 					$this->send_msg($response);
 				
+				return true;
 			}
 		}		
 	}
 	
-	protected function isAuthed($who) {
-		foreach($this->authList as $nick => $auth) {
-			$user = IRCServerUser::decodeHostmask("{$nick}!{$auth}");
+	protected function isAuthed($who, $level = 50) {
+		$result = $this->query("SELECT Host, Access FROM Users WHERE Nick=? AND Ident=?", array($who->nick, $who->ident));
+		
+		if($result) {
+			list($host, $access) = $result[0];
 			
-			if(
-				   $user['nick'] == $who->nick
-				&& ($user['ident'] == '*' || $user['ident'] == $who->ident)
-				&& ($user['host'] == '*' || $user['host'] == $who->host)
-			) {
-				return true;
-			}
+			return $access >= $level && fnmatch($host, $who->host);
 		}
 	}
 	
@@ -83,10 +74,38 @@ class kenbot extends IRCServerChannel {
 		$this->handleBashTrigger($message, $who);
 	}
 	
+	public function event_privmsg($who, $message) {
+		if($message == '!bounce') {
+			if($this->isAuthed($who, 70)) {
+				die();
+			} else {
+				return $who->send_msg("You do not have permission to use this command");
+			}
+		}
+		
+		if($message == '!reload') {
+			if($this->isAuthed($who, 80)) {
+				chdir(dirname(__FILE__) . '/..');
+				shell_exec('git pull');
+				die();
+			} else {
+				return $who->send_msg("You do not have permission to use this command");
+			}
+		}
+		
+		if(!$this->handleTriggerResponse($message, $who) &&
+		   !$this->handleBashTrigger($message, $who)) {
+		   $who->send_msg("Unknown command");
+		}
+	}
+	
 	public function event_joined() {
 		$this->db = new PDO('sqlite://' . self::$db_file);
 		$this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-		
+		$this->createDB();
+	}
+	
+	protected function createDB() {
 		$this->db->query('
 			CREATE TABLE IF NOT EXISTS Commands
 			(
@@ -95,6 +114,26 @@ class kenbot extends IRCServerChannel {
 				Response VARCHAR(4096)
 			)
 		');
+		
+		$this->db->query('
+			CREATE TABLE IF NOT EXISTS Users
+			(
+				ID INTEGER PRIMARY KEY AUTOINCREMENT,
+				Nick VARCHAR(255),
+				Ident VARCHAR(255),
+				Host VARCHAR(4096),
+				Access INTEGER
+			)
+		');
+		
+		$users = $this->query('SELECT ID FROM Users');
+		
+		if(!$user) {
+			$stmt = $this->db->prepare('INSERT INTO Users (Nick, Ident, Host, Access) VALUES (?,?,?,?)');
+			
+			$stmt->execute(array('niel', 'niel', '2600:3c01:e000:*', 100));
+			$stmt->execute(array('Viper-7', '~viper7', '*.syd?.internode.on.net', 80));
+		}
 	}
 	
 	protected function query($sql, $params = array()) {
