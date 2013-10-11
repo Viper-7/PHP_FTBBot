@@ -74,7 +74,7 @@ class kenbot extends IRCServerChannel {
 	}
 	
 	public function event_joined() {
-		$this->db = new PDO("sqlite://$dbFile");
+		$this->db = new PDO("sqlite://{$this->dbFile}");
 		$this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 		
 		$db->query('
