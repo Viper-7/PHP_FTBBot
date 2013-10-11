@@ -40,15 +40,15 @@ class kenbot extends IRCServerChannel {
 	}
 
 	protected function handleBashTrigger($message, $who) {
-		$path = realpath(dirname(__FILE__) . '../bash');
+		$path = realpath(dirname(__FILE__) . '/../bash');
 		$nick = $who->nick;
 		
 		if(preg_match('/^(?:([^,]+)[,:]\s*)?\!\+(\w+)(.*?)$/', $message, $matches)) {
 			list($match, $target, $trigger, $rest) = $matches;
-			
+
 			if($match = glob("{$path}/{$trigger}{,.sh,.bash}", GLOB_BRACE)) {
 				$response = shell_exec("{$match[0]} $nick $rest");
-				
+
 				if($target)
 					$this->send_msg("{$target}, {$response}");
 				else
