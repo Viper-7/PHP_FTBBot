@@ -17,7 +17,7 @@ class FTB extends IRCServerChannel {
 		if(preg_match('/^(?:([^,]+)[,:]\s*)?\!\+(\w+)(.*?)$/', $message, $matches)) {
 			list($match, $target, $trigger, $rest) = $matches;
 			
-			if($trigger == 'add') {
+			if($trigger == 'add' && $this->isAuthed($who)) {
 				$params = array_map('trim', explode('=', $rest, 2));
 				$this->query('INSERT INTO Commands SET Trigger=?, Response=?', $params);
 			} else {
@@ -56,9 +56,18 @@ class FTB extends IRCServerChannel {
 	public function event_joined() {
 		$this->db = new PDO("sqlite://$dbFile");
 		$this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+		
+		$db->query('
+			CREATE TABLE IF NOT EXISTS Commands
+			(
+				ID INTEGER PRIMARY KEY AUTOINCREMENT,
+				Trigger VARCHAR(255),
+				Response VARCHAR(4096)
+			)
+		');
 	}
 	
-	protected function query($sql, $params) {
+	protected function query($sql, $params = array()) {
 		try {
 			if(!is_array($params))
 				$params = array($params);
