@@ -50,6 +50,7 @@ class kenbot extends IRCServerChannel {
 				else
 					$this->send_msg($response);
 				
+			}
 		}		
 	}
 	
