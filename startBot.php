@@ -1,3 +1,4 @@
+#!/usr/bin/env php
 <?php
 include 'lib/Bootstrap.php';
 
