@@ -77,7 +77,7 @@ class kenbot extends IRCServerChannel {
 		$this->db = new PDO("sqlite://{$this->dbFile}");
 		$this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 		
-		$db->query('
+		$this->db->query('
 			CREATE TABLE IF NOT EXISTS Commands
 			(
 				ID INTEGER PRIMARY KEY AUTOINCREMENT,
