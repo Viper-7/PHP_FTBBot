@@ -155,6 +155,7 @@ class kenbot extends IRCServerChannel {
 			if($this->isAuthed($who, 40)) {
 				$this->query('INSERT INTO PastebinWatcher (Pattern) VALUES (?)', trim($rest));
 				$id = $this->db->lastInsertId();
+				$this->rebuildPatterns();
 				return $who->send_msg("Added {$rest} as pattern {$id}.");
 			} else {
 				return $who->send_msg("You do not have permission to use this command");
@@ -177,6 +178,7 @@ class kenbot extends IRCServerChannel {
 			if($this->isAuthed($who, 40)) {
 				$stmt = $this->query('DELETE FROM PastebinWatcher WHERE ID=?', trim($rest));
 				if($stmt->rowCount) {
+					$this->rebuildPatterns();
 					return $who->send_msg("Deleted {$stmt->rowCount} rows.");
 				} else {
 					return $who->send_msg("ID {$rest} not found");
@@ -205,6 +207,7 @@ class kenbot extends IRCServerChannel {
 				$list = $this->query('SELECT Pattern, Resolution FROM PastebinWatcher WHERE ID=?', trim($id));
 				if($list) {
 					$this->query('UPDATE PastebinWatcher SET Resolution=? WHERE ID=?', array($resolution, $id));
+					$this->rebuildPatterns();
 					
 					$who->send_msg("Added resolution for pattern {$list[0]['Pattern']}");
 					
@@ -364,14 +367,19 @@ class kenbot extends IRCServerChannel {
 		}
 	}
 	
+	protected function rebuildPatterns() {
+		$this->pastebinWatcher->testPatterns = array();
+		foreach($this->query('SELECT Pattern, Resolution FROM PastebinWatcher') as $row) {
+			$this->pastebinWatcher->testPatterns[$row['Pattern']] = $row['Resolution'];
+		}
+	}
+	
 	public function event_joined() {
 		$this->db = new PDO('sqlite://' . self::$db_file);
 		$this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 		$this->createDB();
 		$this->pastebinWatcher = new PastebinWatcher(array($this,'send_msg'));
-		foreach($this->query('SELECT Pattern, Resolution FROM PastebinWatcher') as $row) {
-			$this->pastebinWatcher->testPatterns[$row['Pattern']] = $row['Resolution'];
-		}
+		$this->rebuildPatterns();
 	}
 	
 	protected function createDB() {
