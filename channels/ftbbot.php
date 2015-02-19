@@ -1,8 +1,11 @@
 <?php
-class kenbot extends IRCServerChannel {
+class ftbbot extends IRCServerChannel {
 	public static $db_file = '/var/ftb_triggers.sqlite';
+	public static $log_file = '/var/ftb_log.sqlite';
 	public static $backup_path = '/var/ftb_backup.sqlite';
+	
 	protected $db;
+	protected $logdb;
 	protected $pastebinWatcher;
 	
 	protected function handleTriggerResponse($message, $who, $private=false) {
@@ -89,6 +92,9 @@ class kenbot extends IRCServerChannel {
 		$this->handleTriggerResponse($message, $who);
 		$this->handleBashTrigger($message, $who);
 		$this->pastebinWatcher->parseLine($message, $who);
+		
+		$stmt = $this->logdb->prepare("INSERT INTO EventLog SET EventTime=?,EventName=?,EventContent=?");
+		$stmt->execute(array(time(), $who->nick, $message));
 	}
 	
 	public function event_privmsg($who, $message) {
@@ -119,11 +125,12 @@ class kenbot extends IRCServerChannel {
 		}
 		
 		if($message == '!pattern help') {
-			$who->send_msg('!addpattern foo - Adds a pattern to match all pastes containing the word foo. Supports PCRE syntax');
 			$who->send_msg('!patterns - List patterns, their ID, and [R] if they have a resolution');
-			$who->send_msg('!delpattern 2 - Deletes pattern 2');
-			$who->send_msg('!getresolution 2 - Shows the current resolution for pattern 2');
+			$who->send_msg('!addpattern foo - Adds a pattern to match all pastes containing the word foo. Supports PCRE syntax');
 			$who->send_msg('!resolve 2 foo - Adds a resolution of "foo" to pattern 2');
+			$who->send_msg('!namepattern 2 Something went wrong with FML - Sets the display name for pattern 2')
+			$who->send_msg('!getresolution 2 - Shows the current resolution for pattern 2');
+			$who->send_msg('!delpattern 2 - Deletes pattern 2');
 			return true;
 		}
 		
@@ -164,10 +171,10 @@ class kenbot extends IRCServerChannel {
 		
 		if($message == '!patterns') {
 			if($this->isAuthed($who, 40)) {
-				$list = $this->query('SELECT ID, Pattern, Resolution FROM PastebinWatcher');
+				$list = $this->query('SELECT ID, Name, Pattern, Resolution FROM PastebinWatcher');
 				foreach($list as $row) {
 					$w = $row['Resolution'] ? ' [R]' : '';
-					return $who->send_msg("{$row['ID']}: {$row['Pattern']}");
+					return $who->send_msg("{$row['Name']} ({$row['ID']}): {$row['Pattern']}");
 				}
 			} else {
 				return $who->send_msg("You do not have permission to use this command");
@@ -221,6 +228,26 @@ class kenbot extends IRCServerChannel {
 			}
 		}
 		
+		if($first == '!namepattern') {
+			if($this->isAuthed($who, 40)) {
+				list($id, $resolution) = explode(' ', $rest, 2);
+				$list = $this->query('SELECT Pattern, Name FROM PastebinWatcher WHERE ID=?', trim($id));
+				if($list) {
+					$this->query('UPDATE PastebinWatcher SET Name=? WHERE ID=?', array($resolution, $id));
+					$this->rebuildPatterns();
+					
+					$who->send_msg("Added name for pattern {$list[0]['Pattern']}");
+					
+					if($list[0]['Name'])
+						$who->send_msg("Overwrote old name {$list[0]['Name']}");
+					
+					return true;
+				}
+			} else {
+				return $who->send_msg("You do not have permission to use this command");
+			}
+		}
+
 		// Reload the bot
 		if($message == '!bounce') {
 			if($this->isAuthed($who, 70)) {
@@ -369,14 +396,19 @@ class kenbot extends IRCServerChannel {
 	
 	protected function rebuildPatterns() {
 		$this->pastebinWatcher->testPatterns = array();
-		foreach($this->query('SELECT Pattern, Resolution FROM PastebinWatcher') as $row) {
+		foreach($this->query('SELECT Name, Pattern, Resolution FROM PastebinWatcher') as $row) {
 			$this->pastebinWatcher->testPatterns[$row['Pattern']] = $row['Resolution'];
+			$this->pastebinWatcher->patternNames[$row['Pattern']] = $row['Name'];
 		}
 	}
 	
 	public function event_joined() {
 		$this->db = new PDO('sqlite://' . self::$db_file);
 		$this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+		
+		$this->logdb = new PDO('sqlite://' . self::$log_file);
+		$this->logdb->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+		
 		$this->createDB();
 		$this->pastebinWatcher = new PastebinWatcher(array($this,'send_msg'));
 		$this->rebuildPatterns();
@@ -396,6 +428,7 @@ class kenbot extends IRCServerChannel {
 			CREATE TABLE IF NOT EXISTS PastebinWatcher
 			(
 				ID INTEGER PRIMARY KEY AUTOINCREMENT,
+				Name VARCHAR(4096),
 				Pattern VARCHAR(4096),
 				Resolution VARCHAR(255)
 			)
@@ -413,12 +446,22 @@ class kenbot extends IRCServerChannel {
 			)
 		');
 		
+		$this->logdb->query('
+			CREATE TABLE IF NOT EXISTS EventLog
+			(
+				ID INTEGER PRIMARY KEY AUTOINCREMENT,
+				EventTime INTEGER,
+				EventName VARCHAR(32),
+				EventContent VARCHAR(1024),
+				EventType VARCHAR(32)
+			)
+		');
+		
 		$users = $this->query('SELECT ID FROM Users');
 		
 		if(!$users) {
 			$stmt = $this->db->prepare('INSERT INTO Users (Name, Nick, Ident, Host, Access) VALUES (?,?,?,?,?)');
 			
-			$stmt->execute(array('niel', 'niel*', '?niel', '2600:3c01:e000:*', 100));
 			$stmt->execute(array('Viper-7', 'Viper-7', '~viper7', '*.syd?.internode.on.net', 80));
 		}
 	}

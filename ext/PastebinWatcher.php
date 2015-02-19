@@ -2,6 +2,8 @@
 class PastebinWatcher {
 	public $callback;
 	public $testPatterns = array();
+	public $patternNames = array();
+	
 	public $pastebinURL = 'http://pastebin.com/raw.php?i=%s';
 	
 	public function __construct($response_func) {
@@ -22,16 +24,25 @@ class PastebinWatcher {
 			if(!$content)
 				return;
 			
+			$match = false;
+			$msg = '';
+			
 			foreach($this->testPatterns as $pattern => $resolution) {
 				if(preg_match("§{$pattern}§si", $content, $match)) {
-					$msg = '';
-					if($who)
-						$msg = "{$who->nick}: ";
+					$msg .= $this->patternNames[$pattern];
 					
-					$msg .= $resolution;
-					
-					call_user_func($this->callback, $msg);
+					if($resolution) {
+						$msg .= ' | Suggested Fix: ' . $resolution . "\n";
+					} else {
+						$msg .= "\n";
+					}
 				}
+			}
+
+			if($msg) {
+				$msg = "Hi {$who->nick}, I'm a bot that automatically checks your logs. I've found the following issues in the log you posted:\n{$msg}";
+				
+				call_user_func($this->callback, $msg);
 			}
 		}
 	}

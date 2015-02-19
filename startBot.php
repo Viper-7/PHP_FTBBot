@@ -1,7 +1,8 @@
 <?php
 include 'lib/Bootstrap.php';
 
-kenbot::$db_file = '/home/niel/ftb_triggers.sqlite';
-kenbot::$backup_path = '/home/niel/backup_triggers.sqlite';
+ftbbot::$db_file = __DIR__ . '/ftb_triggers.sqlite';
+ftbbot::$log_file = __DIR__ . '/ftb_log.sqlite';
+ftbbot::$backup_path = __DIR__ . '/backup_triggers.sqlite';
 
-startBot('irc.esper.net', 6667, 'FTB-Bot', Array('#kenbot'), TRUE);
+startBot('irc.esper.net', 6667, 'FTB-Bot', Array('#ftb'), TRUE);
