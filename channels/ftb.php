@@ -1,5 +1,5 @@
 <?php
-class ftbbot extends IRCServerChannel {
+class ftb extends IRCServerChannel {
 	public static $db_file = '/var/ftb_triggers.sqlite';
 	public static $log_file = '/var/ftb_log.sqlite';
 	public static $backup_path = '/var/ftb_backup.sqlite';
