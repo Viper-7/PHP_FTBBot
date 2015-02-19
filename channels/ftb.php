@@ -115,6 +115,7 @@ class ftb extends IRCServerChannel {
 		}
 		
 		if($message == '!help') {
+			$who->send_msg('FTB Helper Bot by Viper-7 - General Help');
 			$who->send_msg('!list - List available triggers');
 			$who->send_msg('!search something - search for and list triggers that contain "something" (case sensitive)');
 			$who->send_msg('!say whatever - Say "whatever" in the channel');
