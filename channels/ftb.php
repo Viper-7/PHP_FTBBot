@@ -93,7 +93,7 @@ class ftb extends IRCServerChannel {
 		$this->handleBashTrigger($message, $who);
 		$this->pastebinWatcher->parseLine($message, $who);
 		
-		$stmt = $this->logdb->prepare("INSERT INTO EventLog (EventTime, EventName, EventContent) VALUES (?,?,?)");
+		$stmt = $this->logdb->prepare("INSERT INTO EventLog (EventTime, EventType, EventName, EventContent) VALUES (?,1,?,?)");
 		$stmt->execute(array(time(), $who->nick, $message));
 	}
 	
