@@ -172,6 +172,8 @@ class IRCServerConnection
 
 		$this->conn = $fp;
 		
+		fwrite($fp, "\n");
+		
 		if(empty($this->conn))
 		{
 			self::destroy();
