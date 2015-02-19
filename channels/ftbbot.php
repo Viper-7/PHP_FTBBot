@@ -128,7 +128,7 @@ class ftbbot extends IRCServerChannel {
 			$who->send_msg('!patterns - List patterns, their ID, and [R] if they have a resolution');
 			$who->send_msg('!addpattern foo - Adds a pattern to match all pastes containing the word foo. Supports PCRE syntax');
 			$who->send_msg('!resolve 2 foo - Adds a resolution of "foo" to pattern 2');
-			$who->send_msg('!namepattern 2 Something went wrong with FML - Sets the display name for pattern 2')
+			$who->send_msg('!namepattern 2 Something went wrong with FML - Sets the display name for pattern 2');
 			$who->send_msg('!getresolution 2 - Shows the current resolution for pattern 2');
 			$who->send_msg('!delpattern 2 - Deletes pattern 2');
 			return true;
