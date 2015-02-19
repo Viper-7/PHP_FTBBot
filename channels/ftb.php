@@ -98,6 +98,7 @@ class ftb extends IRCServerChannel {
 	}
 	
 	public function event_privmsg($who, $message) {
+		$message = trim($message);
 		list($first, $rest) = explode(' ', $message, 2) + array('','');
 		
 		if($message == '!levels') {
@@ -158,24 +159,25 @@ class ftb extends IRCServerChannel {
 			}
 		}
 		
+		if($message == '!patterns') {
+			if($this->isAuthed($who, 40)) {
+				$list = $this->query('SELECT ID, Name, Pattern, Resolution FROM PastebinWatcher');
+				foreach($list as $row) {
+					$w = $row['Resolution'] ? ' [R]' : '';
+					$who->send_msg("{$row['Name']} ({$row['ID']}) {$w}: {$row['Pattern']}");
+				}
+				return;
+			} else {
+				return $who->send_msg("You do not have permission to use this command");
+			}
+		}
+
 		if($first == '!addpattern') {
 			if($this->isAuthed($who, 40)) {
 				$this->query('INSERT INTO PastebinWatcher (Pattern) VALUES (?)', trim($rest));
 				$id = $this->db->lastInsertId();
 				$this->rebuildPatterns();
 				return $who->send_msg("Added {$rest} as pattern {$id}.");
-			} else {
-				return $who->send_msg("You do not have permission to use this command");
-			}
-		}
-		
-		if($message == '!patterns') {
-			if($this->isAuthed($who, 40)) {
-				$list = $this->query('SELECT ID, Name, Pattern, Resolution FROM PastebinWatcher');
-				foreach($list as $row) {
-					$w = $row['Resolution'] ? ' [R]' : '';
-					return $who->send_msg("{$row['Name']} ({$row['ID']}): {$row['Pattern']}");
-				}
 			} else {
 				return $who->send_msg("You do not have permission to use this command");
 			}
@@ -462,7 +464,7 @@ class ftb extends IRCServerChannel {
 		if(!$users) {
 			$stmt = $this->db->prepare('INSERT INTO Users (Name, Nick, Ident, Host, Access) VALUES (?,?,?,?,?)');
 			
-			$stmt->execute(array('Viper-7', 'Viper-7', '~viper7', '*.syd?.internode.on.net', 80));
+			$stmt->execute(array('Viper-7', 'Viper-7', '~viper7', '*.syd?.internode.on.net', 100));
 		}
 	}
 	
