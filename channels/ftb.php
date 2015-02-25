@@ -25,6 +25,27 @@ class ftb extends IRCServerChannel {
 					$who->send_msg("You do not have permission to use this command");
 				}
 				return true;
+			} elseif($trigger == 'del') {
+				if($this->isAuthed($who, 30)) {
+					$trigger = trim($rest);
+
+					$commands = $this->query('SELECT Response FROM Commands WHERE Trigger=?', $trigger);
+					if($commands) {
+						$response = $commands[0][0];
+						$this->query('DELETE FROM Commands WHERE Trigger=?', $trigger);
+						$response = "Deleted trigger {$trigger}. It contained:\n{$response}";
+					} else {
+						$response = "Trigger {$trigger} not found";
+					}
+					
+					if($private)
+						$who->send_msg($response);
+					else
+						$this->send_msg($response);
+				} else {
+					$who->send_msg("You do not have permission to use this command");
+				}
+				return true;
 			} else {
 				$commands = $this->query('SELECT Response FROM Commands WHERE Trigger=?', $trigger);
 				
@@ -117,6 +138,8 @@ class ftb extends IRCServerChannel {
 		if($message == '!help') {
 			$who->send_msg('FTB Helper Bot by Viper-7 - General Help');
 			$who->send_msg('!list - List available triggers');
+			$who->send_msg('!add foo=bar - Adds a trigger of !foo with an output of "bar"');
+			$who->send_msg('!del foo - Deletes the trigger !foo');
 			$who->send_msg('!search something - search for and list triggers that contain "something" (case sensitive)');
 			$who->send_msg('!say whatever - Say "whatever" in the channel');
 			$who->send_msg('!bounce - Restart the bot. !reload - Pull the latest bot code from git then restart');
@@ -271,6 +294,27 @@ class ftb extends IRCServerChannel {
 			}
 		}
 		
+		if($message == '!addsite') {
+			if($this->isAuthed($who, 60)) {
+				$params = array_map('trim', explode('|', $rest, 2));
+				
+				$this->query("INSERT INTO PastebinSite (URL, Pattern) VALUES (?, ?)", $params);
+				
+				$site = new PastebinSite($url, $pattern);
+				$this->pastebinWatcher->addSite($site);
+				return $who->send_msg("Added site {$url}");
+			}
+		}
+		
+		if($message == '!delsite') {
+			if($this->isAuthed($who, 60)) {
+				$url = trim($rest);
+				$this->query("DELETE FROM PastebinSite WHERE URL=?", $url);
+				$this->pastebinWatcher->removeSite($url);
+				return $who->send_msg("Deleted site {$url}");
+			}
+		}
+		
 		// List triggers
 		if($message == '!list') {
 			if($this->isAuthed($who, 10)) {
@@ -413,7 +457,8 @@ class ftb extends IRCServerChannel {
 		$this->logdb->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 		
 		$this->createDB();
-		$this->pastebinWatcher = new PastebinWatcher(array($this,'send_msg'));
+		
+		$this->pastebinWatcher = new PastebinWatcher(array($this,'send_msg'), $sites);
 		$this->rebuildPatterns();
 	}
 	
@@ -427,6 +472,15 @@ class ftb extends IRCServerChannel {
 			)
 		');
 		
+		$this->db->query('
+			CREATE TABLE IF NOT EXISTS PastebinSite
+			(
+				ID INTEGER PRIMARY KEY AUTOINCREMENT,
+				URL VARCHAR(4096),
+				Pattern VARCHAR(4096)
+			)
+		');
+
 		$this->db->query('
 			CREATE TABLE IF NOT EXISTS PastebinWatcher
 			(
@@ -466,6 +520,16 @@ class ftb extends IRCServerChannel {
 			$stmt = $this->db->prepare('INSERT INTO Users (Name, Nick, Ident, Host, Access) VALUES (?,?,?,?,?)');
 			
 			$stmt->execute(array('Viper-7', 'Viper-7', '~viper7', '*.syd?.internode.on.net', 100));
+		}
+		
+		
+		$sites = $this->query('SELECT ID FROM PastebinSite');
+		
+		if(!$sites) {
+			$stmt = $this->db->prepare('INSERT INTO PastebinSite (URL, Pattern) VALUES (?,?)');
+			
+			$stmt->execute(array('#https?://(?:www.)?pastebin.com/(\w+)#', 'http://pastebin.com/raw.php?i=%s'));
+			$stmt->execute(array('#https?://(?:www.)?paste.ee/(\w+)#', 'http://paste.ee/r/%s'));
 		}
 	}
 	

@@ -4,45 +4,60 @@ class PastebinWatcher {
 	public $testPatterns = array();
 	public $patternNames = array();
 	
-	public $pastebinURL = 'http://pastebin.com/raw.php?i=%s';
+	public $sites = array();
 	
-	public function __construct($response_func) {
+	public function __construct($response_func, $sites = array()) {
+		$this->sites = $sites;
 		$this->callback = $response_func;
 	}
 	
-	public function getPaste($key) {
-		return file_get_contents(sprintf($this->pastebinURL, $key));
+	public function addSite($site) {
+		$this->sites[] = $site;
+	}
+	
+	public function removeSite($url) {
+		foreach($this->sites as $key => $site) {
+			if($site->URL == $url) {
+				unset($this->sites[$key]);
+				return;
+			}
+		}
 	}
 	
 	public function parseLine($line, $who = null) {
-		if(preg_match('#https?://(?:www.)?pastebin.com/(\w+)#', $line, $match)) {
-			echo "Parsing {$match[0]}";
-			
-			$key = $match[1];
-			$content = $this->getPaste($key);
-			
-			if(!$content)
-				return;
-			
-			$match = false;
-			$msg = '';
-			
-			foreach($this->testPatterns as $pattern => $resolution) {
-				if(preg_match("§{$pattern}§si", $content, $match)) {
-					$msg .= $this->patternNames[$pattern];
-					
-					if($resolution) {
-						$msg .= ' | Suggested Fix: ' . $resolution . "\n";
-					} else {
-						$msg .= "\n";
+		$msg = '';
+		$match = false;
+		
+		foreach($this->sites as $site) {
+			if($key = $site->matchLine($line)) {
+				$content = $site->getPaste($key);
+				
+				if(!$content)
+					return;
+				
+				foreach($this->testPatterns as $pattern => $resolution) {
+					if(preg_match("§{$pattern}§si", $content)) {
+						$msg = $this->patternNames[$pattern];
+
+						if(!$match) {
+							call_user_func($this->callback, "Hi {$who->nick}, Good news! I've found a common problem in your log, and have some more information about it:");
+							$match = true;
+						}
+						
+						if($resolution) {
+							$resolution = "Suggested Fix: {$resolution}";
+							
+							if(strlen($msg . $resolution) > 430) {
+								call_user_func($this->callback, $msg);
+								call_user_func($this->callback, $resolution);
+							} else {
+								call_user_func($this->callback, "{$msg} | {$resolution}");
+							}
+						} else {
+							call_user_func($this->callback, $msg);
+						}
 					}
 				}
-			}
-
-			if($msg) {
-				$msg = "Hi {$who->nick}, I'm a bot that automatically checks your logs. I've found the following issues in the log you posted:\n{$msg}";
-				
-				call_user_func($this->callback, $msg);
 			}
 		}
 	}
