@@ -296,7 +296,7 @@ class ftb extends IRCServerChannel {
 		
 		if($first == '!addsite') {
 			if($this->isAuthed($who, 60)) {
-				$params = array_map('trim', explode('|', $rest, 2));
+				$params = array_map('trim', explode(' ', $rest, 2));
 				
 				$this->query("INSERT INTO PastebinSite (URL, Pattern) VALUES (?, ?)", $params);
 				
@@ -306,7 +306,7 @@ class ftb extends IRCServerChannel {
 			}
 		}
 		
-		if($message == '!delsite') {
+		if($first == '!delsite') {
 			if($this->isAuthed($who, 60)) {
 				$url = trim($rest);
 				$this->query("DELETE FROM PastebinSite WHERE URL=?", $url);
