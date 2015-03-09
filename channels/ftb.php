@@ -294,7 +294,7 @@ class ftb extends IRCServerChannel {
 			}
 		}
 		
-		if($message == '!addsite') {
+		if($first == '!addsite') {
 			if($this->isAuthed($who, 60)) {
 				$params = array_map('trim', explode('|', $rest, 2));
 				
@@ -420,6 +420,11 @@ class ftb extends IRCServerChannel {
 					if($access === '')
 						return $who->send_msg("No user found called '{$name}'");
 					
+					$parts = IRCServerUser::decodeHostmask(trim($host));
+                                        if(!$parts['nick'] || !$parts['ident'] || !$parts['host']) {
+                                                return $who->send_msg("Bad host syntax. Expected 'nick!ident@hostname', got '{$host}'");
+                                        }
+
 					$this->query('INSERT INTO Users (Name, Nick, Ident, Host, Access) VALUES (?,?,?,?,?)', array($name, $parts['nick'], $parts['ident'], $parts['host'], $access));
 					return $who->send_msg("Created user {$name} with host '{$parts['nick']}!{$parts['ident']}@{$parts['host']}' and access {$access}"); // 4 - !user Foo host 60
 				}
