@@ -3,7 +3,7 @@ class PastebinSite {
 	public $pattern;
 	public $rawURL;
 	
-	public function __construct($pattern, $url) {
+	public function __construct($url, $pattern) {
 		$this->pattern = $pattern;
 		$this->rawURL = $url;
 	}

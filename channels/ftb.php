@@ -294,9 +294,9 @@ class ftb extends IRCServerChannel {
 			}
 		}
 		
-		if($message == '!addsite') {
+		if($first == '!addsite') {
 			if($this->isAuthed($who, 60)) {
-				$params = array_map('trim', explode('|', $rest, 2));
+				$params = array_map('trim', explode(' ', $rest, 2));
 				
 				$this->query("INSERT INTO PastebinSite (URL, Pattern) VALUES (?, ?)", $params);
 				
@@ -306,7 +306,7 @@ class ftb extends IRCServerChannel {
 			}
 		}
 		
-		if($message == '!delsite') {
+		if($first == '!delsite') {
 			if($this->isAuthed($who, 60)) {
 				$url = trim($rest);
 				$this->query("DELETE FROM PastebinSite WHERE URL=?", $url);
@@ -420,7 +420,12 @@ class ftb extends IRCServerChannel {
 					if($access === '')
 						return $who->send_msg("No user found called '{$name}'");
 					
-					$this->query('INSERT INTO Users (Name, Nick, Ident, Host, Access) VALUES (?,?,?,?)', array($name, $parts['nick'], $parts['ident'], $parts['host'], $access));
+					$parts = IRCServerUser::decodeHostmask(trim($host));
+                                        if(!$parts['nick'] || !$parts['ident'] || !$parts['host']) {
+                                                return $who->send_msg("Bad host syntax. Expected 'nick!ident@hostname', got '{$host}'");
+                                        }
+
+					$this->query('INSERT INTO Users (Name, Nick, Ident, Host, Access) VALUES (?,?,?,?,?)', array($name, $parts['nick'], $parts['ident'], $parts['host'], $access));
 					return $who->send_msg("Created user {$name} with host '{$parts['nick']}!{$parts['ident']}@{$parts['host']}' and access {$access}"); // 4 - !user Foo host 60
 				}
 			} else {
@@ -458,6 +463,13 @@ class ftb extends IRCServerChannel {
 		
 		$this->createDB();
 		
+		$stmt = $this->db->prepare('SELECT URL, Pattern FROM PastebinSite');
+		$stmt->execute();
+		$sites = array();
+		foreach($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+			$sites[] = new PastebinSite($row['URL'], $row['Pattern']);
+		}
+
 		$this->pastebinWatcher = new PastebinWatcher(array($this,'send_msg'), $sites);
 		$this->rebuildPatterns();
 	}
@@ -527,10 +539,11 @@ class ftb extends IRCServerChannel {
 		$sites = $this->query('SELECT ID FROM PastebinSite');
 		
 		if(!$sites) {
-			$stmt = $this->db->prepare('INSERT INTO PastebinSite (URL, Pattern) VALUES (?,?)');
+			$stmt = $this->db->prepare('INSERT INTO PastebinSite (Pattern, URL) VALUES (?,?)');
 			
-			$stmt->execute(array('#https?://(?:www.)?pastebin.com/(\w+)#', 'http://pastebin.com/raw.php?i=%s'));
-			$stmt->execute(array('#https?://(?:www.)?paste.ee/(\w+)#', 'http://paste.ee/r/%s'));
+			$stmt->execute(array('#http[s]?://(?:www.)?pastebin.com/(\w+)#', 'http://pastebin.com/raw.php?i=%s'));
+			$stmt->execute(array('#http[s]?://(?:www.)?paste.ee/(\w+)#', 'http://paste.ee/r/%s'));
+			$stmt->execute(array('#http[s]?://paste.feed-the-beat.com/view/(\w+)#', 'http://paste.feed-the-beast.com/view/raw/%s'));
 		}
 	}
 	
