@@ -1,9 +1,12 @@
 <?php
 class GoogleFight
 {
-	public function fight()
+	public function fight($msg)
 	{
-		$words = func_get_args();
+		$words = explode(' vs ', $msg);
+		if(count($words) < 2)
+			$words = explode(' ', $msg);
+
 		if (empty($words) || count($words) < 2) {
 			return "Usage: !googlefight word1 word2\n";
 		}

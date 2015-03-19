@@ -25,6 +25,10 @@ class ftb extends IRCServerChannel {
 					$who->send_msg("You do not have permission to use this command");
 				}
 				return true;
+			} elseif($trigger == 'googlefight') {
+				$gf = new GoogleFight();
+				$this->send_msg($gf->fight($rest));
+	
 			} elseif($trigger == 'del') {
 				if($this->isAuthed($who, 30)) {
 					$trigger = trim($rest);
