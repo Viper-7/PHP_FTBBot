@@ -542,7 +542,7 @@ class ftb extends IRCServerChannel {
 			
 			$stmt->execute(array('#http[s]?://(?:www.)?pastebin.com/(\w+)#', 'http://pastebin.com/raw.php?i=%s'));
 			$stmt->execute(array('#http[s]?://(?:www.)?paste.ee/(\w+)#', 'http://paste.ee/r/%s'));
-			$stmt->execute(array('#http[s]?://paste.feed-the-beat.com/view/(\w+)#', 'http://paste.feed-the-beast.com/view/raw/%s'));
+			$stmt->execute(array('#http[s]?://paste.feed-the-beast.com/view/(\w+)#', 'http://paste.feed-the-beast.com/view/raw/%s'));
 		}
 	}
 	
