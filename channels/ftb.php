@@ -532,6 +532,7 @@ class ftb extends IRCServerChannel {
 			$stmt = $this->db->prepare('INSERT INTO Users (Name, Nick, Ident, Host, Access) VALUES (?,?,?,?,?)');
 			
 			$stmt->execute(array('Viper-7', 'Viper-7', '~viper7', '*.syd?.internode.on.net', 100));
+			$stmt->execute(array('Viper-7', 'Viper-7', '~viper7', '*.nsw.optusnet.com.au', 100));
 		}
 		
 		
